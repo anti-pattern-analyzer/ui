@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Graph } from "react-d3-graph";
+import { fetchGraphData } from "@/services/graphs.js";
 
-const Home = () => {
+const SystemArchitecture = () => {
     const [graphData, setGraphData] = useState({ nodes: [], links: [] });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -37,26 +38,10 @@ const Home = () => {
     };
 
     useEffect(() => {
-        const fetchGraphData = async () => {
+        const loadGraphData = async () => {
             try {
-                const response = await fetch("http://localhost:8000/api/graphs");
-                if (!response.ok) {
-                    throw new Error("Network response was not ok");
-                }
-                const data = await response.json();
-
-                if (data.status === "success") {
-                    setGraphData({
-                        nodes: data.graph.nodes.map((node) => ({ id: node.id })),
-                        links: data.graph.links.map((link) => ({
-                            source: link.source,
-                            target: link.target,
-                            label: `Weight: ${link.weight}`,
-                        })),
-                    });
-                } else {
-                    throw new Error(data.message || "Failed to fetch graph data");
-                }
+                const data = await fetchGraphData();
+                setGraphData(data);
             } catch (err) {
                 console.error("Error fetching graph data:", err);
                 setError(err.message);
@@ -65,7 +50,7 @@ const Home = () => {
             }
         };
 
-        fetchGraphData();
+        loadGraphData();
 
         const handleResize = () => {
             setDimensions({
@@ -95,7 +80,6 @@ const Home = () => {
 
     return (
         <div style={{ textAlign: "center", padding: "20px" }}>
-            <h1>Interactive Dependency Graph</h1>
             <Graph
                 id="dependency-graph"
                 data={graphData}
@@ -108,4 +92,4 @@ const Home = () => {
     );
 };
 
-export default Home;
+export default SystemArchitecture;
