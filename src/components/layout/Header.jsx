@@ -18,7 +18,7 @@ const Header = () => {
         <header className="bg-black text-white flex justify-between items-center px-4 py-2">
             {/* Left Section */}
             <div className="flex items-center space-x-6">
-                <h1 className="text-lg font-bold">MicroGraph Insights</h1>
+                <h1 className="text-lg font-bold">InfraPulse</h1>
                 <nav className="flex space-x-4">
                     {navItems.map((item) => (
                         <NavLink
