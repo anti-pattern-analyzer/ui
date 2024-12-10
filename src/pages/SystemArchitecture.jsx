@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { Graph } from "react-d3-graph";
-import { fetchGraphData } from "@/services/graphs.js";
 
 const SystemArchitecture = () => {
     const [graphData, setGraphData] = useState({ nodes: [], links: [] });
@@ -23,7 +22,7 @@ const SystemArchitecture = () => {
         link: {
             highlightColor: "#ADD8E6",
             renderLabel: true,
-            labelProperty: "label",
+            labelProperty: (link) => `Weight: ${link.weight}, Latency: ${link.avg_latency}ms`,
             fontSize: 10,
         },
         d3: {
@@ -33,15 +32,20 @@ const SystemArchitecture = () => {
             disableLinkForce: false,
         },
         panAndZoom: true,
-        height: dimensions.height,
-        width: dimensions.width,
+        height: dimensions.height - 50,
+        width: dimensions.width - 50,
     };
 
     useEffect(() => {
         const loadGraphData = async () => {
             try {
-                const data = await fetchGraphData();
-                setGraphData(data);
+                const response = await fetch("http://localhost:8000/api/graphs");
+                const data = await response.json();
+                if (data.status === "success") {
+                    setGraphData(data.graph);
+                } else {
+                    throw new Error(data.message || "Failed to fetch graph data");
+                }
             } catch (err) {
                 console.error("Error fetching graph data:", err);
                 setError(err.message);
@@ -66,13 +70,18 @@ const SystemArchitecture = () => {
     }, []);
 
     const handleNodeClick = (nodeId) => {
-        console.log(`Clicked on node: ${nodeId}`);
         alert(`Node clicked: ${nodeId}`);
     };
 
     const handleLinkClick = (source, target) => {
-        console.log(`Clicked on link: ${source} -> ${target}`);
-        alert(`Link clicked: ${source} -> ${target}`);
+        const link = graphData.links.find(
+            (link) => link.source === source && link.target === target
+        );
+        if (link) {
+            alert(
+                `Link Details:\nSource: ${source}\nTarget: ${target}\nWeight: ${link.weight}\nAverage Latency: ${link.avg_latency}ms`
+            );
+        }
     };
 
     if (loading) return <p>Loading graph...</p>;
@@ -86,7 +95,6 @@ const SystemArchitecture = () => {
                 config={graphConfig}
                 onClickNode={handleNodeClick}
                 onClickLink={handleLinkClick}
-                d3={{ translateX: dimensions.width / 2, translateY: dimensions.height / 2 }}
             />
         </div>
     );
