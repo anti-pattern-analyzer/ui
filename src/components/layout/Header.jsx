@@ -6,12 +6,8 @@ const Header = () => {
         { name: "Anti-Patterns", path: "/anti-patterns" },
         { name: "Insights", path: "/insights" },
         { name: "Trace Explorer", path: "/trace-explorer" },
-        { name: "Compare Traces", path: "/compare-traces" },
         { name: "System Architecture", path: "/system-architecture" },
-        { name: "Monitor", path: "/monitor" },
-        { name: "Reports", path: "/reports" },
-        { name: "Alerts", path: "/alerts" },
-        { name: "Settings", path: "/settings" },
+        // { name: "Settings", path: "/settings" },
     ];
 
     return (

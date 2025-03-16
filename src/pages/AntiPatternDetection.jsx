@@ -1,23 +1,8 @@
-import React, { useState } from "react";
-import { Graph } from "react-d3-graph";
-import { Bar } from "react-chartjs-2";
-import "chart.js/auto";
+import React, { useState, useEffect } from "react";
+import { fetchAllAntiPatterns } from "../services/pattern.js";
 
-const ToggleSection = ({ title, severity, children }) => {
+const ToggleSection = ({ title, description, children }) => {
     const [isOpen, setIsOpen] = useState(false);
-
-    const getSeverityStyle = (level) => {
-        switch (level) {
-            case "High":
-                return "bg-red-500 text-white";
-            case "Medium":
-                return "bg-yellow-500 text-white";
-            case "Low":
-                return "bg-green-500 text-white";
-            default:
-                return "bg-gray-300 text-gray-700";
-        }
-    };
 
     return (
         <div className="bg-white border rounded shadow-md mb-4">
@@ -27,202 +12,225 @@ const ToggleSection = ({ title, severity, children }) => {
                 } hover:bg-gray-300`}
                 onClick={() => setIsOpen(!isOpen)}
             >
-                <span>{isOpen ? `Hide ${title}` : `Show ${title}`}</span>
-                <span className="flex items-center space-x-2">
-                    <span
-                        className={`px-2 py-1 text-xs font-bold rounded ${getSeverityStyle(
-                            severity
-                        )}`}
-                    >
-                        {severity}
-                    </span>
-                    <span>{isOpen ? "▲" : "▼"}</span>
-                </span>
+                <span>{isOpen ? `▼ Hide ${title}` : `► Show ${title}`}</span>
             </button>
-            {isOpen && <div className="p-6 bg-gray-50">{children}</div>}
+            {isOpen && (
+                <div className="p-6 bg-gray-50">
+                    <p className="text-sm text-gray-600 mb-4">{description}</p>
+                    {children}
+                </div>
+            )}
         </div>
-    );
-};
-
-const CyclicDependencyDetails = ({ data }) => {
-    const graphConfig = {
-        directed: true,
-        nodeHighlightBehavior: true,
-        node: {
-            color: "#008080",
-            size: 300,
-            fontSize: 10,
-            highlightStrokeColor: "blue",
-        },
-        link: {
-            highlightColor: "#ADD8E6",
-        },
-        height: 300,
-        width: "100%",
-    };
-
-    return (
-        <>
-            <p>
-                <strong>Severity:</strong> {data.severity}
-            </p>
-            <p className="text-sm text-gray-600">
-                Cyclic dependencies can lead to cascading failures, resource contention, and difficulties in service scaling.
-            </p>
-            <Graph id="cyclic-graph" data={data.graph} config={graphConfig} />
-            <ul className="list-disc list-inside mt-4 space-y-2">
-                <li>Refactor cyclic dependencies by introducing intermediary services.</li>
-                <li>Consider using a message broker to decouple direct service calls.</li>
-                <li>Perform architectural reviews to identify and prevent future cyclic dependencies.</li>
-            </ul>
-        </>
-    );
-};
-
-const HighFanOutChart = ({ data }) => {
-    const chartData = {
-        labels: data.services.map((item) => item.service),
-        datasets: [
-            {
-                label: "Fan-Out Count",
-                data: data.services.map((item) => item.count),
-                backgroundColor: "rgba(54, 162, 235, 0.6)",
-            },
-        ],
-    };
-
-    return (
-        <>
-            <p className="text-sm text-gray-600">
-                High fan-out occurs when a single service communicates with too many downstream services, increasing complexity and potential failure points.
-            </p>
-            <div className="h-64">
-                <Bar data={chartData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "top" } } }} />
-            </div>
-            <ul className="list-disc list-inside mt-4 space-y-2">
-                <li>Reduce the number of downstream dependencies by merging or eliminating unnecessary calls.</li>
-                <li>Implement caching or data aggregation to reduce direct dependency on downstream services.</li>
-                <li>Introduce a dedicated service to handle common requests from multiple services.</li>
-            </ul>
-        </>
-    );
-};
-
-const ExcessiveDependencyTable = ({ data }) => (
-    <>
-        <p className="text-sm text-gray-600">
-            Excessive dependency indicates services that rely on a large number of other services, making them fragile and hard to maintain.
-        </p>
-        <div className="overflow-x-auto">
-            <table className="w-full table-auto border-collapse border border-gray-300 mt-4 text-sm">
-                <thead>
-                <tr className="bg-gray-200 text-left">
-                    <th className="border border-gray-300 px-4 py-2">Service</th>
-                    <th className="border border-gray-300 px-4 py-2">Dependencies</th>
-                </tr>
-                </thead>
-                <tbody>
-                {data.map((item, index) => (
-                    <tr key={index} className="hover:bg-gray-100">
-                        <td className="border border-gray-300 px-4 py-2">{item.service}</td>
-                        <td className="border border-gray-300 px-4 py-2">{item.count}</td>
-                    </tr>
-                ))}
-                </tbody>
-            </table>
-        </div>
-        <ul className="list-disc list-inside mt-4 space-y-2">
-            <li>Identify critical dependencies and evaluate if they can be reduced.</li>
-            <li>Introduce service abstractions or APIs to consolidate dependencies.</li>
-            <li>Regularly review service dependencies to avoid unnecessary complexity.</li>
-        </ul>
-    </>
-);
-
-const ServiceBottleneckChart = ({ data }) => {
-    const chartData = {
-        labels: data.services.map((item) => item.service),
-        datasets: [
-            {
-                label: "Request Rate",
-                data: data.services.map((item) => item.requestRate),
-                backgroundColor: "rgba(255, 99, 132, 0.6)",
-            },
-        ],
-    };
-
-    return (
-        <>
-            <p className="text-sm text-gray-600">
-                Bottlenecks occur when a service cannot handle the volume of incoming requests, leading to delays and degraded performance.
-            </p>
-            <div className="h-64">
-                <Bar data={chartData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "top" } } }} />
-            </div>
-            <ul className="list-disc list-inside mt-4 space-y-2">
-                <li>Scale the bottleneck service horizontally or vertically to meet demand.</li>
-                <li>Optimize resource usage through performance tuning and profiling.</li>
-                <li>Distribute requests using load balancers to reduce the load on a single service.</li>
-            </ul>
-        </>
     );
 };
 
 const AntiPatternDetection = () => {
-    const cyclicDependencyData = {
-        severity: "High",
-        graph: {
-            nodes: [
-                { id: "Service-A" },
-                { id: "Service-B" },
-                { id: "Service-C" },
-            ],
-            links: [
-                { source: "Service-A", target: "Service-B" },
-                { source: "Service-B", target: "Service-C" },
-                { source: "Service-C", target: "Service-A" },
-            ],
-        },
-    };
+    const [antiPatterns, setAntiPatterns] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    const highFanOutData = {
-        services: [
-            { service: "Service-A", count: 12 },
-            { service: "Service-B", count: 8 },
-        ],
-    };
+    useEffect(() => {
+        fetchAllAntiPatterns()
+            .then((data) => {
+                if (data) setAntiPatterns(data);
+                else setError("Failed to fetch anti-patterns");
+            })
+            .catch((err) => setError(`Error: ${err.message}`))
+            .finally(() => setLoading(false));
+    }, []);
 
-    const excessiveDependencyData = [
-        { service: "Service-A", count: 10 },
-        { service: "Service-C", count: 9 },
-    ];
-
-    const bottleneckData = {
-        services: [
-            { service: "Service-B", requestRate: 120 },
-            { service: "Service-D", requestRate: 95 },
-        ],
-    };
+    if (loading) return <p className="text-lg text-gray-700">🔄 Loading anti-patterns...</p>;
+    if (error) return <p className="text-red-500">❌ {error}</p>;
 
     return (
         <div className="p-6 space-y-6">
-            <h1 className="text-2xl font-bold">Anti-Pattern Detection</h1>
-            <p>Run an analysis to detect anti-patterns in your system.</p>
-            <button className="bg-teal-500 text-white px-4 py-2 rounded hover:bg-teal-600 mb-6">
-                Run Detection
-            </button>
-            <ToggleSection title="Cyclic Dependency" severity="High">
-                <CyclicDependencyDetails data={cyclicDependencyData} />
-            </ToggleSection>
-            <ToggleSection title="High Fan-Out" severity="Medium">
-                <HighFanOutChart data={highFanOutData} />
-            </ToggleSection>
-            <ToggleSection title="Excessive Dependency" severity="Low">
-                <ExcessiveDependencyTable data={excessiveDependencyData} />
-            </ToggleSection>
-            <ToggleSection title="Service Bottleneck" severity="Medium">
-                <ServiceBottleneckChart data={bottleneckData} />
-            </ToggleSection>
+            <h1 className="text-2xl font-bold text-gray-800">📊 Anti-Pattern Detection</h1>
+            <p className="text-gray-600">Below are the detected anti-patterns in your system.</p>
+
+            {/* 1. Cyclic Dependencies */}
+            {antiPatterns.cyclic_dependencies?.cycles.length > 0 && (
+                <ToggleSection title="Cyclic Dependencies" description="Services depend on each other in a loop, making them hard to manage.">
+                    <table className="w-full border border-gray-300 text-sm">
+                        <thead><tr className="bg-gray-200"><th className="border px-4 py-2">Cycle</th></tr></thead>
+                        <tbody>
+                        {antiPatterns.cyclic_dependencies.cycles.map((cycle, index) => (
+                            <tr key={index}><td className="border px-4 py-2">{cycle.cycle.join(" → ")}</td></tr>
+                        ))}
+                        </tbody>
+                    </table>
+                </ToggleSection>
+            )}
+
+            {/* 2. Knot Patterns */}
+            {antiPatterns.knot_patterns?.dense_clusters.length > 0 && (
+                <ToggleSection title="The Knot Pattern" description="Multiple services are tightly coupled, making the system complex.">
+                    <table className="w-full border border-gray-300 text-sm">
+                        <thead><tr className="bg-gray-200"><th className="border px-4 py-2">Service</th></tr></thead>
+                        <tbody>
+                        {antiPatterns.knot_patterns.dense_clusters.map((cluster, index) => (
+                            <tr key={index}><td className="border px-4 py-2">{cluster.service}</td></tr>
+                        ))}
+                        </tbody>
+                    </table>
+                </ToggleSection>
+            )}
+
+            {/* 3. Bottleneck Services */}
+            {antiPatterns.bottleneck_services?.services.length > 0 && (
+                <ToggleSection title="Bottleneck Services" description="These services receive too many requests, causing performance slowdowns.">
+                    <table className="w-full border border-gray-300 text-sm">
+                        <thead><tr className="bg-gray-200"><th className="border px-4 py-2">Service</th></tr></thead>
+                        <tbody>
+                        {antiPatterns.bottleneck_services.services.map((service, index) => (
+                            <tr key={index}><td className="border px-4 py-2">{service}</td></tr>
+                        ))}
+                        </tbody>
+                    </table>
+                </ToggleSection>
+            )}
+
+            {/* 4. Nano Services */}
+            {antiPatterns.nano_services?.services.length > 0 && (
+                <ToggleSection title="Nano Services" description="Small services with minimal responsibilities, increasing communication overhead.">
+                    <table className="w-full border border-gray-300 text-sm">
+                        <thead><tr className="bg-gray-200"><th className="border px-4 py-2">Service</th><th className="border px-4 py-2">Connections</th></tr></thead>
+                        <tbody>
+                        {antiPatterns.nano_services.services.map((item, index) => (
+                            <tr key={index}>
+                                <td className="border px-4 py-2">{item.service}</td>
+                                <td className="border px-4 py-2">{item.total_connections}</td>
+                            </tr>
+                        ))}
+                        </tbody>
+                    </table>
+                </ToggleSection>
+            )}
+
+            {/* 5. Long Service Chains */}
+            {antiPatterns.long_service_chains?.chains.length > 0 && (
+                <ToggleSection title="Long Service Chains" description="Excessive dependency chains between services, increasing latency.">
+                    <table className="w-full border border-gray-300 text-sm">
+                        <thead><tr className="bg-gray-200"><th className="border px-4 py-2">Source</th><th className="border px-4 py-2">Target</th><th className="border px-4 py-2">Length</th></tr></thead>
+                        <tbody>
+                        {antiPatterns.long_service_chains.chains.map((chain, index) => (
+                            <tr key={index}>
+                                <td className="border px-4 py-2">{chain.source}</td>
+                                <td className="border px-4 py-2">{chain.target}</td>
+                                <td className="border px-4 py-2">{chain.length}</td>
+                            </tr>
+                        ))}
+                        </tbody>
+                    </table>
+                </ToggleSection>
+            )}
+
+            {/* 6. Fan-In Overload */}
+            {antiPatterns.fan_in_overload?.services && Object.keys(antiPatterns.fan_in_overload.services).length > 0 && (
+                <ToggleSection title="Fan-In Overload" description="A single service is overloaded with too many upstream dependencies.">
+                    <table className="w-full border border-gray-300 text-sm">
+                        <thead><tr className="bg-gray-200"><th className="border px-4 py-2">Service</th><th className="border px-4 py-2">Upstream Services</th></tr></thead>
+                        <tbody>
+                        {Object.entries(antiPatterns.fan_in_overload.services).map(([service, details], index) => (
+                            <tr key={index}>
+                                <td className="border px-4 py-2">{service}</td>
+                                <td className="border px-4 py-2">{details.upstream_services.join(", ")}</td>
+                            </tr>
+                        ))}
+                        </tbody>
+                    </table>
+                </ToggleSection>
+            )}
+
+            {/* 7. Fan-Out Overload */}
+            {antiPatterns.fan_out_overload?.services && Object.keys(antiPatterns.fan_out_overload.services).length > 0 && (
+                <ToggleSection title="Fan-Out Overload" description="A service sends requests to too many downstream services, increasing failure risk.">
+                    <table className="w-full border border-gray-300 text-sm">
+                        <thead><tr className="bg-gray-200"><th className="border px-4 py-2">Service</th><th className="border px-4 py-2">Downstream Services</th></tr></thead>
+                        <tbody>
+                        {Object.entries(antiPatterns.fan_out_overload.services).map(([service, details], index) => (
+                            <tr key={index}>
+                                <td className="border px-4 py-2">{service}</td>
+                                <td className="border px-4 py-2">{details.downstream_services.join(", ")}</td>
+                            </tr>
+                        ))}
+                        </tbody>
+                    </table>
+                </ToggleSection>
+            )}
+
+            {/* 8. Chatty Services */}
+            {antiPatterns.chatty_services?.services && Object.keys(antiPatterns.chatty_services.services).length > 0 && (
+                <ToggleSection title="Chatty Services" description="Excessive communication between services, causing network congestion.">
+                    <table className="w-full border border-gray-300 text-sm">
+                        <thead><tr className="bg-gray-200"><th className="border px-4 py-2">Service</th><th className="border px-4 py-2">Total Calls</th><th className="border px-4 py-2">Avg Duration (ms)</th></tr></thead>
+                        <tbody>
+                        {Object.entries(antiPatterns.chatty_services.services).map(([service, details], index) => (
+                            <tr key={index}>
+                                <td className="border px-4 py-2">{service}</td>
+                                <td className="border px-4 py-2">{details.total_calls}</td>
+                                <td className="border px-4 py-2">{details.avg_duration}</td>
+                            </tr>
+                        ))}
+                        </tbody>
+                    </table>
+                </ToggleSection>
+            )}
+
+            {/* 9. Sync Overuse */}
+            {antiPatterns.sync_overuse?.issues.length > 0 && (
+                <ToggleSection title="Synchronous Call Overuse" description="Blocking synchronous calls between services, reducing scalability.">
+                    <table className="w-full border border-gray-300 text-sm">
+                        <thead><tr className="bg-gray-200"><th className="border px-4 py-2">Source</th><th className="border px-4 py-2">Destination</th><th className="border px-4 py-2">Method</th><th className="border px-4 py-2">Avg Duration (ms)</th></tr></thead>
+                        <tbody>
+                        {antiPatterns.sync_overuse.issues.map((issue, index) => (
+                            <tr key={index}>
+                                <td className="border px-4 py-2">{issue.source}</td>
+                                <td className="border px-4 py-2">{issue.destination}</td>
+                                <td className="border px-4 py-2">{issue.method}</td>
+                                <td className="border px-4 py-2">{issue.avg_duration}</td>
+                            </tr>
+                        ))}
+                        </tbody>
+                    </table>
+                </ToggleSection>
+            )}
+
+            {/* 10. API Gateway Usage Issues */}
+            {antiPatterns.api_gateway_usage?.issues.length > 0 && (
+                <ToggleSection title="Improper API Gateway Usage" description="API Gateway is overloaded or misused, leading to performance issues.">
+                    <table className="w-full border border-gray-300 text-sm">
+                        <thead><tr className="bg-gray-200"><th className="border px-4 py-2">API Gateway</th><th className="border px-4 py-2">Service</th><th className="border px-4 py-2">Avg Duration (ms)</th></tr></thead>
+                        <tbody>
+                        {antiPatterns.api_gateway_usage.issues.map((issue, index) => (
+                            <tr key={index}>
+                                <td className="border px-4 py-2">{issue.api_gateway}</td>
+                                <td className="border px-4 py-2">{issue.service}</td>
+                                <td className="border px-4 py-2">{issue.avg_duration}</td>
+                            </tr>
+                        ))}
+                        </tbody>
+                    </table>
+                </ToggleSection>
+            )}
+
+            {/* 11. Improper Load Balancer */}
+            {antiPatterns.improper_load_balancer?.imbalances.length > 0 && (
+                <ToggleSection title="Improper Load Balancer" description="Load balancing is uneven, leading to bottlenecks and inefficiencies.">
+                    <table className="w-full border border-gray-300 text-sm">
+                        <thead><tr className="bg-gray-200"><th className="border px-4 py-2">Service</th><th className="border px-4 py-2">Requests</th><th className="border px-4 py-2">Imbalance Factor</th></tr></thead>
+                        <tbody>
+                        {antiPatterns.improper_load_balancer.imbalances.map((imbalance, index) => (
+                            <tr key={index}>
+                                <td className="border px-4 py-2">{imbalance.service}</td>
+                                <td className="border px-4 py-2">{imbalance.requests}</td>
+                                <td className="border px-4 py-2">{imbalance.imbalance_factor}</td>
+                            </tr>
+                        ))}
+                        </tbody>
+                    </table>
+                </ToggleSection>
+            )}
+
         </div>
     );
 };
