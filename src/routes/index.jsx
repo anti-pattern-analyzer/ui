@@ -1,10 +1,6 @@
 import { Route, Routes } from 'react-router-dom';
-import TraceExplorer from "@/pages/TraceExplorer.jsx";
-import SystemArchitecture from "@/pages/SystemArchitecture.jsx";
 import NotFound from "@/pages/NotFound.jsx";
-import Settings from "@/pages/Settings.jsx";
-import AntiPatternInsights from "@/pages/AntiPatternInsights.jsx";
-import AntiPatternDetection from "@/pages/AntiPatternDetection.jsx";
+import { AntiPatternDetection, AntiPatternInsights, TraceExplorer, SystemArchitecture, Settings } from "@/pages";
 
 const AnimatedRoutes = () => {
     return (
