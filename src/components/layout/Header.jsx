@@ -3,7 +3,7 @@ import { NavLink } from "react-router-dom";
 
 const Header = () => {
     const navItems = [
-        { name: "Weighted Dependency Graph", path: "/weight-graph" },
+        { name: "Weighted Dependency Graph", path: "/weighted-graph" },
         { name: "Coupling Metrics", path: "/coupling-metrics" },
         { name: "Configurations", path: "/configs" },
     ];

@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom';
 import NotFound from "@/pages/NotFound.jsx";
 import { AntiPatternDetection, AntiPatternInsights, TraceExplorer, SystemArchitecture, Settings } from "@/pages";
+import { WeightedGraphViewer } from "@/pages";
 
 const AnimatedRoutes = () => {
     return (
@@ -11,6 +12,7 @@ const AnimatedRoutes = () => {
             <Route path="/trace-explorer" element={<TraceExplorer />} />
             <Route path="/system-architecture" element={<SystemArchitecture />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/weighted-graph" element={<WeightedGraphViewer />} />
             <Route path="*" element={<NotFound />} />
         </Routes>
     );
