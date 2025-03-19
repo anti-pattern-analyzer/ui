@@ -2,8 +2,21 @@ const BASE_URL = "http://localhost:8000/api/graphs/weight";
 
 export const fetchWeightedDependencyGraph = async (startTime, endTime, weight_type) => {
     try {
-        const endpoint = `?start_time=${startTime}&end_time=${endTime}&weight_type=${weight_type}`;
-        const response = await fetch(`${BASE_URL}${endpoint}`);
+        var query = "?"
+        if (startTime && startTime != "") {
+            const parsedStartTime = parseInt(startTime, 10);
+            if (!isNaN(parsedStartTime))
+                query += `start_time=${parsedStartTime}&`;
+        }
+        if (endTime){
+            const parsedEndTime = parseInt(endTime, 10);
+            if (!isNaN(parsedEndTime))
+                query += `end_time=${parsedEndTime}&`;
+        }
+        if (weight_type)
+            query += `weight_type=${weight_type}&`;
+        
+        const response = await fetch(`${BASE_URL}${query}`);
 
         if (!response.ok) {
             throw new Error(`Network response was not ok: ${response.statusText}`);
