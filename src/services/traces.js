@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_ENDPOINT = "http://localhost:8085/traces";
+const API_ENDPOINT = "http://167.172.83.56:8085/traces";
 
 export const fetchTraces = async () => {
     try {

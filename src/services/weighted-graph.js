@@ -1,4 +1,4 @@
-const BASE_URL = "http://localhost:8000/api/graphs/weight";
+const BASE_URL = "http://167.172.83.56:8000/api/graphs/weight";
 
 export const fetchWeightedDependencyGraph = async (startTime, endTime, weight_type) => {
     try {

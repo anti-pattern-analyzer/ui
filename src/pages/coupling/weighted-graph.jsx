@@ -3,7 +3,6 @@ import { fetchWeightedDependencyGraph } from "../../services/weighted-graph.js";
 import ForceGraph2D from "react-force-graph-2d";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { data } from "autoprefixer";
 
 const WeightedGraphViewer = () => {
   const [startTime, setStartTime] = useState(null);
@@ -13,14 +12,13 @@ const WeightedGraphViewer = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [hoverNode, setHoverNode] = useState(null);
-  const [positionsLocked, setPositionsLocked] = useState(false);
-
+  const [tab, setTab] = useState("edges");
+  const [noDataLabel, setNoDataLabel] = useState(true)
+  const NoData = "No traces to plot Graph"
   const fgRef = useRef();
   const sidePanelRef = useRef();
 
-  const convertToMicroseconds = (date) => {
-    return date ? date.getTime() * 1000 : null;
-  };
+  const convertToMicroseconds = (date) => (date ? date.getTime() * 1000 : null);
 
   const transformData = (data) => ({
     nodes: data.nodes.map((node) => ({
@@ -32,139 +30,136 @@ const WeightedGraphViewer = () => {
       source: edge.source,
       target: edge.target,
       weight: edge.weight || 1,
+      latency: edge["latency(ms)"] || 0,
+      frequency: edge.frequency || 0,
+      co_execution: edge.co_execution || 0,
     })),
   });
 
   useEffect(() => {
-    if (fgRef.current) {
-      const graph = fgRef.current;
-      graph.d3Force("link").distance((link) => link.weight * 10);
-    }
-  }, [weightedGraph]);
-
-  useEffect(() => {
-    if (hoverNode && sidePanelRef.current) {
-      const nodeElement = document.getElementById(`node-${hoverNode.id}`);
-      if (nodeElement) {
-        nodeElement.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      }
-    }
-  }, [hoverNode]);
-
-  useEffect(() => {
-    setStartTime(new Date(new Date().getTime() - 15 * 60 * 1000));
+    setStartTime(new Date(Date.now() - 15 * 60 * 1000));
     setEndTime(new Date());
     handleFetchGraph();
   }, []);
 
+  useEffect(() => {
+    if (fgRef.current) {
+      fgRef.current.d3Force("link").distance((link) => link.weight * 10);
+    }
+
+    if (weightedGraph.nodes.length === 0 && weightedGraph.links.length === 0) {
+      setNoDataLabel("No data found for the selected time range");
+    }
+
+  }, [weightedGraph]);
+
+  useEffect(() => {
+    if (hoverNode && sidePanelRef.current) {
+      const nodeEl = document.getElementById(`node-${hoverNode.id}`);
+      if (nodeEl)
+        nodeEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [hoverNode]);
+
   const handleFetchGraph = async () => {
     setLoading(true);
     setError(null);
-    setPositionsLocked(false);
 
-    const startTimeMicro = convertToMicroseconds(startTime);
-    const endTimeMicro = convertToMicroseconds(endTime);
+    const startMicro = convertToMicroseconds(startTime);
+    const endMicro = convertToMicroseconds(endTime);
 
     try {
-      const response = await fetchWeightedDependencyGraph(
-        startTimeMicro,
-        endTimeMicro,
+      const resp = await fetchWeightedDependencyGraph(
+        startMicro,
+        endMicro,
         weightType
       );
-      if (response && response.status === "success") {
-        if (response.data == null) {
-          setWeightedGraph({ nodes: [], links: [] });
-          setError("No data found for the selected time range");
-          return;
-        }
-
-        if (
-          response.data.nodes.length === 0 &&
-          response.data.edges.length === 0
-        ) {
-          setWeightedGraph({ nodes: [], links: [] });
-          setError("No data found for the selected time range");
-          return;
+      if (resp.status === "success") {
+        if (resp.data && resp.data.nodes && resp.data.edges) {
+          if (!resp.data.nodes.length && !resp.data.edges.length) {
+            setError("No data found for the selected time range");
+            setWeightedGraph({ nodes: [], links: [] });
+          } else {
+            setWeightedGraph(transformData(resp.data));
+          }
         } else {
-          setWeightedGraph(transformData(response.data));
+          setError(null)
+          setWeightedGraph({ nodes: [], links: [] });
+          setNoDataLabel(NoData);
         }
       } else {
-        setError("Failed to fetch valid weighted dependency graph data");
-        setWeightedGraph({ nodes: [], links: [] });
+        throw new Error("Invalid response");
       }
     } catch (err) {
-      console.error(err);
       setError(`Error: ${err.message}`);
+      setWeightedGraph({ nodes: [], links: [] });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="p-6 flex space-x-6 relative flex-grow">
-      <div id="fetchDataDiv" className="w-3/4 flex flex-col space-y-6">
+    // Adjust height to fill remaining space below header; parent should be flex-col
+    <div className="flex flex-1" style={{ height: "calc(100vh - 4rem)" }}>
+      {/* Left Panel: controls on top, graph below */}
+      <div className="w-3/4 flex flex-col p-6 space-y-6 h-full">
         <h1 className="text-2xl font-bold text-gray-800">
           📊 Weighted Dependency Graph
         </h1>
-        <div className="border-black text-white p-2 rounded shadow-md flex items-center space-x-4">
-          <div className="flex flex-shrink">
-            <div className="flex items-center space-x-2">
-              <label className="block text-black">Start Time:</label>
-              <DatePicker
-                selected={startTime}
-                onChange={(date) => setStartTime(date)}
-                showTimeSelect
-                dateFormat="Pp"
-                className="p-2 border rounded bg-gray-700 text-white"
-                placeholderText="Select start time"
-              />
-            </div>
+
+        {/* Controls */}
+        <div className="flex items-center space-x-4 p-2 bg-white rounded shadow">
+          <div className="flex items-center space-x-2">
+            <label className="text-gray-700">Start Time:</label>
+            <DatePicker
+              selected={startTime}
+              onChange={setStartTime}
+              showTimeSelect
+              dateFormat="Pp"
+              className="p-2 border rounded"
+            />
           </div>
-          <div className="flex flex-shrink">
-            <div className="flex items-center space-x-2">
-              <label className="block text-black">End Time:</label>
-              <DatePicker
-                selected={endTime}
-                onChange={(date) => setEndTime(date)}
-                showTimeSelect
-                dateFormat="Pp"
-                className="p-2 border rounded bg-gray-700 text-white"
-                placeholderText="Select end time"
-              />
-            </div>
+          <div className="flex items-center space-x-2">
+            <label className="text-gray-700">End Time:</label>
+            <DatePicker
+              selected={endTime}
+              onChange={setEndTime}
+              showTimeSelect
+              dateFormat="Pp"
+              className="p-2 border rounded"
+            />
           </div>
-          <div className="flex flex-grow">
-            <div className="flex items-center space-x-2">
-              <label className="block text-black">Weight Type:</label>
-              <select
-                value={weightType}
-                onChange={(e) => setWeightType(e.target.value)}
-                className="p-2 border rounded bg-gray-700 text-white"
-              >
-                <option value="CO">CoExecution</option>
-                <option value="Lat">Latency</option>
-                <option value="Freq">Frequency</option>
-              </select>
-            </div>
+          <div className="flex items-center space-x-2">
+            <label className="text-gray-700">Weight Type:</label>
+            <select
+              value={weightType}
+              onChange={(e) => setWeightType(e.target.value)}
+              className="p-2 border rounded"
+            >
+              <option value="CO">CoExecution</option>
+              <option value="Lat">Latency</option>
+              <option value="Freq">Frequency</option>
+            </select>
           </div>
           <button
-            className="bg-teal-500 text-black px-4 py-2 rounded hover:bg-teal-600"
             onClick={handleFetchGraph}
+            className="bg-teal-500 text-white px-4 py-2 rounded hover:bg-teal-600"
           >
             Fetch Graph
           </button>
         </div>
-        {loading && (
-          <p className="text-lg text-gray-700">
-            🔄 Loading Weighted Dependency Graph...
-          </p>
-        )}
+
+        {loading && <p className="text-lg text-gray-700">🔄 Loading…</p>}
         {error && <p className="text-red-500">❌ {error}</p>}
+        {noDataLabel && <p className="text-gray-500">{noDataLabel}</p>}
+
+        {/* Graph below controls */}
         {weightedGraph.nodes.length > 0 && (
-          <div className="bg-white p-4 rounded shadow-md relative">
+          <div className="flex-grow bg-white p-4 rounded shadow overflow-hidden">
             <ForceGraph2D
               ref={fgRef}
               graphData={weightedGraph}
+              style={{ width: "100%", height: "100%" }}
               nodeAutoColorBy="id"
               linkDirectionalArrowLength={(link) =>
                 Math.max(10, link.weight * 2)
@@ -174,34 +169,88 @@ const WeightedGraphViewer = () => {
               linkWidth={(link) => Math.max(2, link.weight / 2)}
               linkDirectionalParticles={4}
               linkDirectionalParticleSpeed={(link) => link.weight / 50}
-              onNodeHover={(node) => setHoverNode(node || null)}
+              onNodeHover={(node) => {
+                setTab("nodes");
+                setHoverNode(node);
+              }}
             />
           </div>
         )}
       </div>
+
+      {/* Right Panel: side information */}
       <div
         ref={sidePanelRef}
-        id="sidePanelNodeInfoDiv"
-        className="w-1/4 bg-gray-100 p-4 rounded shadow-md fixed right-0 top-14 bottom-0 overflow-y-auto"
+        className="w-1/4 h-full bg-gray-100 p-4 rounded shadow overflow-y-auto"
       >
-        <h2 className="text-xl font-bold text-gray-700">🔢 Node Information</h2>
-        <div className="mt-2 space-y-2">
-          {weightedGraph.nodes.map((node) => (
-            <div
-              key={node.id}
-              id={`node-${node.id}`}
-              className={`p-2 border rounded cursor-pointer ${
-                hoverNode && hoverNode.id === node.id
-                  ? "bg-yellow-300"
-                  : "bg-white"
-              }`}
-            >
-              <p className="font-bold">{node.id}</p>
-              <p>Importance: {node.importance.toFixed(2)}</p>
-              <p>Dependence: {node.dependence.toFixed(2)}</p>
-            </div>
-          ))}
+        <div className="flex space-x-4 mb-4">
+          <button
+            className={`p-2 rounded ${
+              tab === "nodes" ? "bg-teal-500 text-white" : "bg-gray-200"
+            }`}
+            onClick={() => setTab("nodes")}
+          >
+            Node Info
+          </button>
+          <button
+            className={`p-2 rounded ${
+              tab === "edges" ? "bg-teal-500 text-white" : "bg-gray-200"
+            }`}
+            onClick={() => setTab("edges")}
+          >
+            Edge Info
+          </button>
         </div>
+
+        {tab === "nodes" && (
+          <div>
+            <h2 className="text-xl font-semibold text-gray-700">
+              🔢 Node Information
+            </h2>
+            <div className="mt-2 space-y-2">
+              {weightedGraph.nodes.map((node) => (
+                <div
+                  key={node.id}
+                  id={`node-${node.id}`}
+                  className={`p-2 border rounded cursor-pointer ${
+                    hoverNode?.id === node.id ? "bg-yellow-300" : "bg-white"
+                  }`}
+                >
+                  <p className="font-bold">{node.id}</p>
+                  <p>Importance: {node.importance.toFixed(2)}</p>
+                  <p>Dependence: {node.dependence.toFixed(2)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {tab === "edges" && (
+          <div>
+            <h2 className="text-xl font-semibold text-gray-700">
+              🔗 Edge Information
+            </h2>
+            <div className="mt-2 space-y-2">
+              {weightedGraph.links.map((link, i) => (
+                <div key={i} className="p-2 border rounded bg-white">
+                  <p className="font-bold">
+                    {typeof link.source === "object"
+                      ? link.source.id
+                      : link.source}{" "}
+                    ➡{" "}
+                    {typeof link.target === "object"
+                      ? link.target.id
+                      : link.target}
+                  </p>
+                  <p>Weight: {link.weight.toFixed(2)}</p>
+                  <p>Latency: {link.latency.toFixed(4)} ms</p>
+                  <p>Frequency: {link.frequency.toFixed(4)}</p>
+                  <p>Co-Execution: {link.co_execution.toFixed(2)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 export const fetchGraphData = async () => {
     try {
-        const response = await fetch("http://localhost:8000/api/graph");
+        const response = await fetch("http://167.172.83.56:8000/api/graph");
         const result = await response.json();
 
         console.log("📡 API Response:", result);
@@ -24,6 +24,27 @@ export const fetchGraphData = async () => {
         };
     } catch (error) {
         console.error("❌ Error Fetching Graph Data:", error);
+        return { nodes: [], links: [] };
+    }
+};
+
+
+export const fetchChangePointGraph = async (start_time, end_time, metric) => {
+    try {
+        const response = await fetch(
+            `http://167.172.83.56:8000/api/metrics/change-points?start_time=${start_time}&end_time=${end_time}&metric=${metric}`);
+        const result = await response.json();
+
+        // console.log("API Response:", result);
+
+        if (!result.data) {
+            console.error("Invalid Plot Data:", result);
+            return [];
+        }
+
+        return result.data;
+    } catch (error) {
+        console.error("❌ Error Fetching Plot Data:", error);
         return { nodes: [], links: [] };
     }
 };

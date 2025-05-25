@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
-const baseURL = 'http://localhost:8085/api/v1';
+const baseURL = 'http://167.172.83.56:8085/api/v1';
 
 export const loginUser = async (email, password) => {
     try {
