@@ -93,6 +93,7 @@ const WeightedGraphViewer = () => {
     } catch (err) {
       setError(`Error: ${err.message}`);
       setWeightedGraph({ nodes: [], links: [] });
+      setNoDataLabel(false);
     } finally {
       setLoading(false);
     }
